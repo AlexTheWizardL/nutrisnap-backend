@@ -19,6 +19,9 @@ import * as path from 'path';
         }
 
         const isProduction = process.env.NODE_ENV === 'production';
+        const shouldSync = process.env.DATABASE_SYNCHRONIZE === 'true';
+
+        console.log('Database sync enabled:', shouldSync);
 
         return {
           type: 'postgres',
@@ -28,7 +31,7 @@ import * as path from 'path';
           password: dbConfig.password,
           database: dbConfig.database,
           entities: [path.join(__dirname, '/../**/*.entity.{ts,js}')],
-          synchronize: dbConfig.synchronize,
+          synchronize: shouldSync,
           logging: dbConfig.logging,
           migrations: [path.join(__dirname, '/../migrations/**/*.{ts,js}')],
           migrationsTableName: 'migrations',
