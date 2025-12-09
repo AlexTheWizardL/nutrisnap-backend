@@ -7,6 +7,10 @@ import { SharedModule } from './modules/shared/shared.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { MailModule } from './modules/mail/mail.module';
+import { MealModule } from './modules/meal/meal.module';
+import { NutritionModule } from './modules/nutrition/nutrition.module';
+import { FoodAnalysisModule } from './modules/food-analysis/food-analysis.module';
+import { TelegramAuthModule } from './modules/telegram-auth/telegram-auth.module';
 import { JwtAuthGuard } from './modules/shared/guards';
 
 @Module({
@@ -21,6 +25,10 @@ import { JwtAuthGuard } from './modules/shared/guards';
     UserModule,
     AuthModule,
     MailModule,
+    MealModule,
+    NutritionModule,
+    FoodAnalysisModule,
+    TelegramAuthModule,
   ],
   providers: [
     {
