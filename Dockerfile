@@ -1,38 +1,20 @@
-# syntax=docker/dockerfile:1
+FROM node:22-alpine
 
-ARG NODE_VERSION=22.16.0
-FROM node:${NODE_VERSION}-alpine as base
-RUN apk update
-RUN apk add git
-WORKDIR /usr/src/app
+WORKDIR /app
 
-FROM base as deps
+# Install dependencies
+COPY package*.json ./
+RUN npm ci
 
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
-
-COPY package.json .
-
-FROM deps as build
-
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=package-lock.json,target=package-lock.json \
-    --mount=type=cache,target=/root/.npm \
-    npm ci
-
+# Copy source and build
 COPY . .
 RUN npm run build
 
-FROM base as final
-ENV NODE_ENV production
+# Remove dev dependencies
+RUN npm prune --production
 
-USER node
-COPY package.json .
+ENV NODE_ENV=production
 
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/dist ./dist
+EXPOSE 3001
 
-EXPOSE ${APP_PORT:-3001}
 CMD ["npm", "run", "start:prod"]
