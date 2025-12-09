@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CreateNutritionTables1702100000000 implements MigrationInterface {
-  name = 'CreateNutritionTables1702100000000';
+export class CreateNutritionTables1764770000000 implements MigrationInterface {
+  name = 'CreateNutritionTables1764770000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create meal_type enum
@@ -14,9 +14,9 @@ export class CreateNutritionTables1702100000000 implements MigrationInterface {
       CREATE TYPE "nutrition_goal_type_enum" AS ENUM ('lose_weight', 'maintain', 'gain_weight', 'build_muscle')
     `);
 
-    // Add telegram to auth_provider enum
+    // Add telegram to users_provider enum
     await queryRunner.query(`
-      ALTER TYPE "auth_provider_enum" ADD VALUE IF NOT EXISTS 'telegram'
+      ALTER TYPE "public"."users_provider_enum" ADD VALUE IF NOT EXISTS 'telegram'
     `);
 
     // Create meals table

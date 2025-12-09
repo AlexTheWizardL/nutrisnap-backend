@@ -18,7 +18,14 @@ async function bootstrap() {
     }),
   );
 
-  app.enableCors();
+  app.enableCors({
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://alexthewizardl.github.io',
+    ],
+    credentials: true,
+  });
 
   const config = new DocumentBuilder()
     .setTitle('NestJS Boilerplate API')
@@ -34,9 +41,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = configService.get<number>('app.port', 3001);
+  // Render provides PORT env var
+  const port = process.env.PORT || configService.get<number>('app.port', 3001);
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(`Application is running on: ${await app.getUrl()}`);
   console.log(`Swagger documentation available at: ${await app.getUrl()}/api/docs`);

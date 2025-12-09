@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: nutrisnap-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /api/docs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_PORT
+        value: 3001
+      - key: DATABASE_TYPE
+        value: postgres
+      - key: DATABASE_HOST
+        fromDatabase:
+          name: nutrisnap-db
+          property: host
+      - key: DATABASE_PORT
+        fromDatabase:
+          name: nutrisnap-db
+          property: port
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: nutrisnap-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: nutrisnap-db
+          property: password
+      - key: DATABASE_NAME
+        fromDatabase:
+          name: nutrisnap-db
+          property: database
+      - key: DATABASE_LOGGING
+        value: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+
+databases:
+  - name: nutrisnap-db
+    plan: free
+    databaseName: nutrisnap
+    user: nutrisnap_user

@@ -18,6 +18,8 @@ import * as path from 'path';
           throw new Error('Database configuration is missing');
         }
 
+        const isProduction = process.env.NODE_ENV === 'production';
+
         return {
           type: 'postgres',
           host: dbConfig.host,
@@ -30,6 +32,7 @@ import * as path from 'path';
           logging: dbConfig.logging,
           migrations: [path.join(__dirname, '/../migrations/**/*.{ts,js}')],
           migrationsTableName: 'migrations',
+          ssl: isProduction ? { rejectUnauthorized: false } : false,
         };
       },
       dataSourceFactory: async (options) => {
