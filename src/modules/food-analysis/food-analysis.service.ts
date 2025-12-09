@@ -292,7 +292,7 @@ Include all visible items including sauces, dressings, and sides.`;
           ],
           generationConfig: {
             temperature: 0.3,
-            maxOutputTokens: 1500,
+            maxOutputTokens: 4096,
           },
         }),
       },
