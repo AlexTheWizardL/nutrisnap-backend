@@ -2,49 +2,59 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AnalyzeFoodRequestDto, AnalyzeFoodResponseDto, DetectedFoodItemDto } from './dto';
 
-type AIProvider = 'claude' | 'openai';
+type AIProvider = 'claude' | 'openai' | 'gemini';
 
 @Injectable()
 export class FoodAnalysisService {
   private readonly logger = new Logger(FoodAnalysisService.name);
   private readonly claudeApiKey: string;
   private readonly openaiApiKey: string;
+  private readonly geminiApiKey: string;
   private readonly preferredProvider: AIProvider;
   private readonly claudeModel: string;
   private readonly openaiModel: string;
+  private readonly geminiModel: string;
 
   constructor(private readonly configService: ConfigService) {
     this.claudeApiKey = this.configService.get<string>('ANTHROPIC_API_KEY') || '';
     this.openaiApiKey = this.configService.get<string>('OPENAI_API_KEY') || '';
+    this.geminiApiKey = this.configService.get<string>('GEMINI_API_KEY') || '';
     this.claudeModel = this.configService.get<string>('CLAUDE_MODEL') || 'claude-sonnet-4-20250514';
     this.openaiModel = this.configService.get<string>('OPENAI_MODEL') || 'gpt-4o-mini';
+    this.geminiModel = this.configService.get<string>('GEMINI_MODEL') || 'gemini-2.5-flash';
 
     // Determine preferred provider based on available keys
     const configuredProvider = this.configService.get<string>('AI_PROVIDER')?.toLowerCase();
-    if (configuredProvider === 'openai' && this.openaiApiKey) {
+    if (configuredProvider === 'gemini' && this.geminiApiKey) {
+      this.preferredProvider = 'gemini';
+    } else if (configuredProvider === 'openai' && this.openaiApiKey) {
       this.preferredProvider = 'openai';
     } else if (configuredProvider === 'claude' && this.claudeApiKey) {
       this.preferredProvider = 'claude';
+    } else if (this.geminiApiKey) {
+      this.preferredProvider = 'gemini';
     } else if (this.claudeApiKey) {
       this.preferredProvider = 'claude';
     } else if (this.openaiApiKey) {
       this.preferredProvider = 'openai';
     } else {
-      this.preferredProvider = 'claude'; // Default, will fail if no key
+      this.preferredProvider = 'gemini'; // Default to gemini (free tier available)
     }
 
     this.logger.log(`AI Provider configured: ${this.preferredProvider}`);
   }
 
   async analyzeFood(dto: AnalyzeFoodRequestDto): Promise<AnalyzeFoodResponseDto> {
-    if (!this.claudeApiKey && !this.openaiApiKey) {
-      throw new BadRequestException('No AI API key configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY');
+    if (!this.claudeApiKey && !this.openaiApiKey && !this.geminiApiKey) {
+      throw new BadRequestException('No AI API key configured. Set GEMINI_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY');
     }
 
     try {
       let content: string;
 
-      if (this.preferredProvider === 'claude') {
+      if (this.preferredProvider === 'gemini') {
+        content = await this.analyzeWithGemini(dto);
+      } else if (this.preferredProvider === 'claude') {
         content = await this.analyzeWithClaude(dto);
       } else {
         content = await this.analyzeWithOpenAI(dto);
@@ -231,6 +241,74 @@ Include all visible items including sauces, dressings, and sides.`;
 
     if (!content) {
       throw new BadRequestException('No response from OpenAI');
+    }
+
+    return content;
+  }
+
+  private async analyzeWithGemini(dto: AnalyzeFoodRequestDto): Promise<string> {
+    if (!this.geminiApiKey) {
+      throw new BadRequestException('Gemini API key not configured');
+    }
+
+    // Extract base64 data and media type
+    let base64Data = dto.imageBase64;
+    let mimeType = 'image/jpeg';
+
+    if (base64Data.startsWith('data:')) {
+      const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        mimeType = matches[1];
+        base64Data = matches[2];
+      }
+    }
+
+    const userMessage = dto.context
+      ? `Analyze this food image. Additional context: ${dto.context}`
+      : 'Analyze this food image and provide nutritional information.';
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: this.getSystemPrompt() + '\n\n' + userMessage,
+                },
+                {
+                  inline_data: {
+                    mime_type: mimeType,
+                    data: base64Data,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 1500,
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      this.logger.error(`Gemini API error: ${error}`);
+      throw new BadRequestException('Failed to analyze food image with Gemini');
+    }
+
+    const data = await response.json();
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!content) {
+      throw new BadRequestException('No response from Gemini');
     }
 
     return content;
