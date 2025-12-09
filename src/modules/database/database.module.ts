@@ -32,6 +32,7 @@ import * as path from 'path';
           logging: dbConfig.logging,
           migrations: [path.join(__dirname, '/../migrations/**/*.{ts,js}')],
           migrationsTableName: 'migrations',
+          migrationsRun: true,
           ssl: isProduction ? { rejectUnauthorized: false } : false,
         };
       },
